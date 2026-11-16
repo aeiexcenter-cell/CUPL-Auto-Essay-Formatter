@@ -20,4 +20,4 @@
 ## macOS 构建说明
 
 - **本地在 macOS 上打包**：运行 `bash packaging/build_macos.sh`（默认使用 `python3.13` 或 `python3`，可通过 `PYTHON_BIN=...` 指定解释器）。脚本会使用 `packaging/CUPL-UTAF-macos.spec` 打出 `dist/CUPL-UTAF.app`，自动运行 `--selftest`、生成 macOS 版许可声明、执行 ad-hoc 签名并封装 `dist/CUPL-UTAF V<版本> macOS-<架构>.dmg`。
-- **GitHub Actions 自动构建**：`.github/workflows/macos.yml` 在 `port_to_macos` 分支推送或手动触发时，会先跑完 Windows 基线并生成跨平台对比基准，再于 `macos-14`（arm64）与 `macos-15-intel`（x86_64）上并行完成自检、AAT、跨平台产物一致性比对、GUI 巡检截图与 `.dmg` 打包。
+- **GitHub Actions 自动构建**：`.github/workflows/macos.yml` 在 `port_to_macos` 分支推送或手动触发时，会先跑完 Windows 基线并生成跨平台对比基准，再于 `macos-15`（arm64）与 `macos-15-intel`（x86_64）上并行完成自检、AAT、跨平台产物一致性比对、GUI 巡检截图与 `.dmg` 打包。

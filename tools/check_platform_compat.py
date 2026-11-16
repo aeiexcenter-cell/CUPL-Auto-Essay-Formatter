@@ -247,7 +247,11 @@ def case_bindings() -> None:
         else:
             platform_ui.bind_shortcut(frame, "z", lambda _e: None)
             bound = frame.bind()
-            check("macOS bind_shortcut 含 Command", any("Command" in b for b in bound), repr(bound))
+            check(
+                "macOS bind_shortcut 含 Command",
+                any(("Command" in b or "Mod1" in b) for b in bound),
+                repr(bound),
+            )
             platform_ui.unbind_shortcut(frame, "z")
 
         sample = "右键：插入空行；Ctrl+Z：撤回上一步。Ctrl＋滚轮缩放，资源管理器，%APPDATA%\\AutoEssayTypesettingTool"
