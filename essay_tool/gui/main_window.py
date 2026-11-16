@@ -220,7 +220,10 @@ from essay_tool.gui.platform_ui import (  # noqa: E402
     apply_app_icon as _platform_apply_app_icon,
     apply_platform_scaling as _platform_apply_scaling,
     enable_dpi_awareness as _platform_enable_dpi,
+    flat_button,
     init_theme as _platform_init_theme,
+    install_mac_handlers,
+    platform_text,
 )
 
 
@@ -816,6 +819,12 @@ class MainWindow(tk.Tk):
         self.status("启动成功，你可以根据右侧向导图使用本工具")
         from essay_tool.gui.win_drop import enable_file_drop
         enable_file_drop(self, self._on_files_dropped)
+        install_mac_handlers(
+            self,
+            on_quit=self.destroy,
+            on_open_files=self._on_files_dropped,
+            on_about=lambda: self.nb.select(5),
+        )
 
     def _init_checkbox_images(self) -> None:
         """注册自制的复选框样式（实现在 `gui/widgets.py`，两个窗口共用）。
@@ -993,14 +1002,14 @@ class MainWindow(tk.Tk):
         # —— 窄栏（最下）：最新一条 + 两个按钮
         bar = tk.Frame(bottom, bg="#e9e9e6")
         self._log_bar = bar
-        self.btn_log_toggle = tk.Button(bar, text="收起日志", font=(FAMILY, 9),
-                                        bd=0, bg="#e9e9e6", fg=C_HINT,
-                                        activebackground="#e9e9e6",
-                                        cursor="hand2", command=self._toggle_log)
+        self.btn_log_toggle = flat_button(bar, text="收起日志", font=(FAMILY, 9),
+                                          bd=0, bg="#e9e9e6", fg=C_HINT,
+                                          activebackground="#e9e9e6",
+                                          cursor="hand2", command=self._toggle_log)
         self.btn_log_toggle.pack(side="right", padx=(4, 8), pady=4)
-        tk.Button(bar, text="清空", font=(FAMILY, 9), bd=0, bg="#e9e9e6",
-                  fg=C_HINT, activebackground="#e9e9e6", cursor="hand2",
-                  command=self._clear_log).pack(side="right", pady=4)
+        flat_button(bar, text="清空", font=(FAMILY, 9), bd=0, bg="#e9e9e6",
+                    fg=C_HINT, activebackground="#e9e9e6", cursor="hand2",
+                    command=self._clear_log).pack(side="right", pady=4)
         self.lbl_status = tk.Label(bar, text="", font=(FAMILY, LOG_FONT_SIZE),
                                    bg="#e9e9e6", fg=C_TEXT, anchor="w")
         self.lbl_status.pack(side="left", padx=10, pady=4, fill="x", expand=True)
@@ -1349,11 +1358,11 @@ class MainWindow(tk.Tk):
         self._guide_title = tk.Label(title_row, text="使用向导", font=(FAMILY, 16, "bold"),
                                      bg=C_APP, fg=C_TEXT)
         self._guide_title.place(relx=0.5, rely=0.5, anchor="center")
-        tk.Label(head, text="点击划线文本可直接跳转；Ctrl＋滚轮缩放，空白处双击复位",
+        tk.Label(head, text=platform_text("点击划线文本可直接跳转；Ctrl＋滚轮缩放，空白处双击复位"),
                  font=(FAMILY, 9), bg=C_APP, fg=C_HINT).pack(fill="x", anchor="center")
         # 折叠按钮：只在窗口没最大化时出现（见 `_on_main_configure`）。箭头指向"窗口
         # 右边缘将要移动的方向"——收起＝窗口向左缩，所以是 ◂。
-        self.btn_guide_collapse = tk.Button(
+        self.btn_guide_collapse = flat_button(
             title_row, text="收起向导 ◂", font=(FAMILY, 12, "bold"), relief="flat", bd=0,
             padx=16, pady=6, bg="#e4e4e0", activebackground="#d6d6d1", fg=C_TEXT,
             cursor="hand2", command=self._collapse_guide)
@@ -3429,8 +3438,8 @@ class MainWindow(tk.Tk):
                           font_size=11).pack(anchor="w", pady=(0, 2))
         self._checkbutton(inner, "清除文档中所有的空行", variable=self.v_clear_blank,
                           font_size=11).pack(anchor="w", pady=(0, 2))
-        tk.Label(inner, text="分页符指手动插入的分页符（Ctrl+Enter），不含分节符；空行指完全没有内容的段落"
-                             "（含有空格、图片、编号等的段落不算）。封面范围内的内容不受影响。",
+        tk.Label(inner, text=platform_text("分页符指手动插入的分页符（Ctrl+Enter），不含分节符；空行指完全没有内容的段落"
+                                           "（含有空格、图片、编号等的段落不算）。封面范围内的内容不受影响。"),
                  font=(FAMILY, 9), bg=C_PANEL, fg=C_HINT, wraplength=700,
                  justify="left").pack(anchor="w", pady=(2, 8))
 

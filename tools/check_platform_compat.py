@@ -178,10 +178,122 @@ def case_ui_basics() -> None:
         root.destroy()
 
 
+def case_flat_button() -> None:
+    print("== flat_button ==")
+    import tkinter as tk
+    from essay_tool.gui import platform_ui
+
+    root = tk.Tk()
+    root.withdraw()
+    orig_ui_mac = platform_ui.UI_MAC
+    try:
+        platform_ui.UI_MAC = False
+        clicked: list[str] = []
+        w_win = platform_ui.flat_button(
+            root,
+            text="收起日志",
+            bd=0,
+            bg="#e9e9e6",
+            fg="#8a8a8a",
+            activebackground="#e9e9e6",
+            command=lambda: clicked.append("win"),
+        )
+        check("Windows 返回 tk.Button", isinstance(w_win, tk.Button) and w_win.cget("bg") == "#e9e9e6")
+
+        platform_ui.UI_MAC = True
+        w_mac = platform_ui.flat_button(
+            root,
+            text="收起日志",
+            bd=0,
+            bg="#e9e9e6",
+            fg="#8a8a8a",
+            activebackground="#d6d6d1",
+            command=lambda: clicked.append("mac"),
+        )
+        check("UI_MAC 返回 tk.Label 子类", isinstance(w_mac, tk.Label))
+        w_mac.invoke()
+        check("UI_MAC flat_button invoke 触发回调", clicked == ["mac"], repr(clicked))
+        w_mac.configure(state="disabled")
+        w_mac.invoke()
+        check("disabled 后 invoke 不触发回调", clicked == ["mac"], repr(clicked))
+        w_mac.configure(text="展开日志")
+        check("configure 更新文本", w_mac.cget("text") == "展开日志")
+    finally:
+        platform_ui.UI_MAC = orig_ui_mac
+        root.destroy()
+
+
+def case_bindings() -> None:
+    print("== 快捷键 / 右键 / 文案 / macHandlers ==")
+    import tkinter as tk
+    from essay_tool.gui import platform_ui
+
+    root = tk.Tk()
+    root.withdraw()
+    orig_ui_mac = platform_ui.UI_MAC
+    orig_is_mac = platform_ui.IS_MAC
+    try:
+        frame = tk.Frame(root)
+        if not platform_ui.IS_MAC:
+            platform_ui.bind_shortcut(frame, "z", lambda _e: None)
+            bound = frame.bind()
+            check(
+                "Windows bind_shortcut 绑 Control 且无 Command",
+                any("Control" in b and "z" in b.lower() for b in bound)
+                and not any("Command" in b for b in bound),
+                repr(bound),
+            )
+            platform_ui.unbind_shortcut(frame, "z")
+        else:
+            platform_ui.bind_shortcut(frame, "z", lambda _e: None)
+            bound = frame.bind()
+            check("macOS bind_shortcut 含 Command", any("Command" in b for b in bound), repr(bound))
+            platform_ui.unbind_shortcut(frame, "z")
+
+        sample = "右键：插入空行；Ctrl+Z：撤回上一步。Ctrl＋滚轮缩放，资源管理器，%APPDATA%\\AutoEssayTypesettingTool"
+        platform_ui.UI_MAC = False
+        check("Windows 文案原样返回", platform_ui.platform_text(sample) == sample)
+        platform_ui.UI_MAC = True
+        mac_txt = platform_ui.platform_text(sample)
+        check(
+            "UI_MAC 文案替换为 Mac 习惯",
+            "⌘Z" in mac_txt and "⌘＋" in mac_txt and "访达" in mac_txt and "Library/Application Support" in mac_txt,
+            mac_txt,
+        )
+
+        # install_mac_handlers 在非 Mac 返回 False；模拟 Mac 时能注册 Tcl 命令
+        platform_ui.IS_MAC = False
+        check("非 Mac install_mac_handlers 返回 False", platform_ui.install_mac_handlers(root) is False)
+
+        opened: list[list[str]] = []
+        quitted: list[bool] = []
+        platform_ui.IS_MAC = True
+        ok = platform_ui.install_mac_handlers(
+            root,
+            on_quit=lambda: quitted.append(True),
+            on_open_files=lambda ps: opened.append(ps),
+            on_about=lambda: None,
+        )
+        quit_cmd = str(root.tk.call("info", "commands", "::tk::mac::Quit"))
+        root.tk.call("::tk::mac::OpenDocument", "/tmp/a.docx")
+        root.tk.call("::tk::mac::Quit")
+        check(
+            "模拟 Mac 注册 ::tk::mac 命令并可触发",
+            ok is True and "::tk::mac::Quit" in quit_cmd and opened == [["/tmp/a.docx"]] and quitted == [True],
+            f"quit_cmd={quit_cmd!r} opened={opened!r} quitted={quitted!r}",
+        )
+    finally:
+        platform_ui.UI_MAC = orig_ui_mac
+        platform_ui.IS_MAC = orig_is_mac
+        root.destroy()
+
+
 def main() -> int:
     case_compat()
     case_paths()
     case_ui_basics()
+    case_flat_button()
+    case_bindings()
     print()
     print(f"失败 {len(fails)} 条")
     for name in fails:

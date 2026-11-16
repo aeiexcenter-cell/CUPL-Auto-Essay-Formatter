@@ -28,6 +28,8 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Callable, Sequence
 
+from essay_tool.gui.platform_ui import bind_context_menu, bind_shortcut
+
 # 配色：表头白底，**不分色块了**（用户 2026-09-17：“浅蓝色部分的框线没渲染出来——
 # 其实不用区分色块了”），行与行靠**实实在在的黑框线**分开；
 # 那些色块当年是给 Treeview 用的（它没有真框线），自绘以后反而会把框线盖掉。
@@ -156,13 +158,11 @@ class CanvasTable(tk.Frame):
         self.canvas.bind("<B1-Motion>", self._on_drag)
         self.canvas.bind("<ButtonRelease-1>", self._on_release)
         self.canvas.bind("<Double-Button-1>", self._on_double)
-        self.canvas.bind("<Control-c>", self.copy_selection)
-        self.canvas.bind("<Control-C>", self.copy_selection)
-        self.canvas.bind("<Control-a>", self.select_all)
-        self.canvas.bind("<Control-A>", self.select_all)
+        bind_shortcut(self.canvas, "c", self.copy_selection)
+        bind_shortcut(self.canvas, "a", self.select_all)
         if on_menu is not None:
-            self.canvas.bind("<Button-3>", on_menu)
-            self.bind("<Button-3>", on_menu)
+            bind_context_menu(self.canvas, on_menu)
+            bind_context_menu(self, on_menu)
         if on_wheel is not None:
             self.canvas.bind("<MouseWheel>", on_wheel)
             self.bind("<MouseWheel>", on_wheel)

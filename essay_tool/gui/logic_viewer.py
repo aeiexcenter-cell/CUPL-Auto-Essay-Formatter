@@ -53,6 +53,7 @@ import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import ttk
 
+from essay_tool.gui.platform_ui import platform_text
 from essay_tool.gui.table_view import CanvasTable
 from essay_tool.gui.win_place import center_on
 from essay_tool.platform_compat import UI_FONT as FAMILY
@@ -214,6 +215,7 @@ class LogicWindow(tk.Toplevel):
             center_on(self, master, 1280, 840)
         self.minsize(960, 600)
 
+        text = platform_text(text)
         self.nodes, self.lines = build_logic_nodes(text)
         self.heading_lv = {nd["start"]: nd["level"] for nd in self.nodes}
 

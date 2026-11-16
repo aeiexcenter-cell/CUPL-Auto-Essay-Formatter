@@ -50,8 +50,9 @@ _ROOT = pathlib.Path(__file__).resolve().parents[2]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from essay_tool.gui.platform_ui import platform_text  # noqa: E402
 from essay_tool.gui.widgets import wheel_notch  # noqa: E402
-from essay_tool.platform_compat import UI_FONT as FAMILY  # noqa: E402
+from essay_tool.platform_compat import IS_MAC, UI_FONT as FAMILY  # noqa: E402
 C_LINK = "#0563c1"              # 可点文字：Word 超链接同款蓝
 
 _NODE_FILL = "#ffffff"
@@ -208,6 +209,8 @@ class FlowPanel(tk.Frame):
         self.canvas.bind("<MouseWheel>", self._on_wheel)
         self.canvas.bind("<Shift-MouseWheel>", self._on_wheel_h)
         self.canvas.bind("<Control-MouseWheel>", self._on_wheel_zoom)
+        if IS_MAC:
+            self.canvas.bind("<Command-MouseWheel>", self._on_wheel_zoom)
 
         self._draw()
 
@@ -454,7 +457,7 @@ def main() -> None:
 
     bottom = tk.Frame(root, bg="#e9e9e6")
     bottom.pack(side="bottom", fill="x")
-    lbl = tk.Label(bottom, text="点蓝色带下划线的节点试试；Ctrl＋滚轮缩放，空白处双击复位",
+    lbl = tk.Label(bottom, text=platform_text("点蓝色带下划线的节点试试；Ctrl＋滚轮缩放，空白处双击复位"),
                    font=(FAMILY, 9), bg="#e9e9e6", fg="#333", anchor="w")
     lbl.pack(side="left", padx=10, pady=4)
     zoom_lbl = tk.Label(bottom, text="", font=(FAMILY, 9), bg="#e9e9e6", fg="#333")

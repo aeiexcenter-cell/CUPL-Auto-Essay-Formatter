@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import tkinter as tk
 
+from essay_tool.platform_compat import IS_MAC
+
 
 def center_on(
     window: tk.Misc,
@@ -52,8 +54,9 @@ def center_on(
             x = (window.winfo_screenwidth() - width) // 2
             y = (window.winfo_screenheight() - height) // 2
 
+        min_y = 25 if IS_MAC else 0
         x = max(0, min(x, window.winfo_screenwidth() - width))
-        y = max(0, min(y, window.winfo_screenheight() - height))
+        y = max(min_y, min(y, window.winfo_screenheight() - height))
         window.geometry(f"+{int(x)}+{int(y)}")
     except Exception:  # noqa: BLE001 —— 摆位置失败不影响功能，不值得往上抛
         pass

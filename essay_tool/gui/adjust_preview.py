@@ -267,6 +267,12 @@ _AUTO_GENERATED_PARTS = ("目录", "插图清单", "附表清单", "插图和附
 # 三张清单部件：它们之间只能有四种合法组合（用户 2026-09-15 定），见
 # `_list_shape_conflict`。
 _LIST_SHAPE_PARTS = ("插图清单", "附表清单", "插图和附表清单")
+from essay_tool.gui.platform_ui import (
+    bind_context_menu,
+    bind_shortcut,
+    platform_text,
+    unbind_shortcut,
+)
 from essay_tool.gui.widgets import PANEL_BG, checkbutton, init_checkbox_style, wheel_notch
 from essay_tool.gui.win_place import center_on
 from essay_tool.platform_compat import UI_FONT as FAMILY
@@ -1416,8 +1422,8 @@ class AdjustWindow:
 
         # 灰字提示放在左边整块的最下面（原来是整行铺开的一条，"重置/确认"够不到它那一行）；
         # 宽度跟四列提示按钮一样宽，窄了换行，不被裁掉。
-        foot_label = tk.Label(left_col, text="右键：插入空行；Ctrl+Z：撤回上一步。"
-                                             "如需修改段落实际顺序或内容，请重新编辑原文档！",
+        foot_label = tk.Label(left_col, text=platform_text("右键：插入空行；Ctrl+Z：撤回上一步。"
+                                                           "如需修改段落实际顺序或内容，请重新编辑原文档！"),
                               font=(FAMILY, 9), bg="#e9e9e6", fg="#8a8a8a", anchor="w",
                               justify="left")
         foot_label.pack(side="top", anchor="w", pady=(6, 0))
@@ -1428,7 +1434,7 @@ class AdjustWindow:
         self.canvas.bind("<Button-1>", self.on_press)
         self.canvas.bind("<B1-Motion>", self.on_motion)
         self.canvas.bind("<ButtonRelease-1>", self.on_release)
-        self.canvas.bind("<Button-3>", self.on_right_click)
+        bind_context_menu(self.canvas, self.on_right_click)
         self.canvas.bind("<Motion>", self.on_hover)
         self.canvas.bind("<Configure>", self.on_configure)
         # 滚轮绑在画布本身上，不用 bind_all——嵌进主窗口之后，bind_all 会在
@@ -1443,7 +1449,7 @@ class AdjustWindow:
         # destroy 掉旧的表格，而绑定还指着已销毁实例的 on_undo —— 那时候按
         # Ctrl+Z 就是 on_undo → 已销毁的 canvas（TclError → 崩溃弹窗）。
         self._undo_toplevel = root.winfo_toplevel()
-        self._undo_toplevel.bind_all("<Control-z>", self.on_undo)
+        bind_shortcut(self._undo_toplevel, "z", self.on_undo, all_=True)
         # 本类不是 Tk 控件（只是个普通类，控件都挂在传进来的 root 上），所以
         # 销毁钩子挂在画布上——主窗口重建结构页时会 destroy 掉这些子控件。
         self.canvas.bind("<Destroy>", self._on_destroy, add="+")
@@ -3471,7 +3477,7 @@ class AdjustWindow:
             self._autoscroll_job = None
         top = getattr(self, "_undo_toplevel", None)
         if top is not None and top.winfo_exists():
-            top.unbind_all("<Control-z>")
+            unbind_shortcut(top, "z", all_=True)
 
     def on_undo(self, event=None) -> None:
         # Ctrl+Z 绑在顶层窗口上（键盘快捷键没法只靠画布绑定生效），嵌进
