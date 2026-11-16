@@ -130,9 +130,11 @@ jobs:
         run: PYTHON_BIN="$(which python)" bash packaging/build_macos.sh
 
       - name: Upload macOS .dmg and self-test report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: macos-dmg-${{ matrix.arch }}
           path: |
             dist/*.dmg
             build/pyinstaller/selftest.txt
+            build/pyinstaller/selftest_stdio.log

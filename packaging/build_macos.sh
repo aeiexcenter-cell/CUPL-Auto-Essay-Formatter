@@ -38,9 +38,25 @@ if [ ! -x "$EXE" ]; then
 fi
 
 REPORT="$WORK/selftest.txt"
-rm -f "$REPORT"
-"$EXE" --selftest "$REPORT"
-cat "$REPORT"
+STDLOG="$WORK/selftest_stdio.log"
+rm -f "$REPORT" "$STDLOG"
+set +e
+"$EXE" --selftest "$REPORT" >"$STDLOG" 2>&1
+RC=$?
+set -e
+if [ -s "$STDLOG" ]; then
+    echo "=== selftest stdio ==="
+    cat "$STDLOG"
+fi
+if [ -f "$REPORT" ]; then
+    echo "=== selftest report ==="
+    cat "$REPORT"
+fi
+if [ "$RC" -ne 0 ]; then
+    MSG="$(cat "$REPORT" "$STDLOG" 2>/dev/null | grep -v '^OK ' | tr '\n' ' ' | cut -c1-1500)"
+    echo "::error title=SelftestFailed::exit=${RC} ${MSG}"
+    exit "$RC"
+fi
 
 "$PY" "$ROOT/packaging/make_notices.py" --platform macos
 
