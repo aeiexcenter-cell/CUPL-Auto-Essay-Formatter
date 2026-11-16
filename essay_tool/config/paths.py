@@ -21,12 +21,15 @@
 from __future__ import annotations
 
 import atexit
+from collections.abc import Mapping
 import os
 import pathlib
 import shutil
 import sys
 import tempfile
 import time
+
+from essay_tool.platform_compat import IS_MAC, user_data_base
 
 APP_DIR_NAME = "AutoEssayTypesettingTool"
 
@@ -65,15 +68,28 @@ def builtin_presets_dir() -> pathlib.Path:
     return resource_dir() / "presets"
 
 
-def user_data_dir() -> pathlib.Path:
-    """每用户可写的数据目录：`%APPDATA%\\AutoEssayTypesettingTool`。
+def user_data_dir(
+    platform: str | None = None,
+    env: Mapping[str, str] | None = None,
+    home: pathlib.Path | None = None,
+) -> pathlib.Path:
+    """每用户可写的数据目录：Windows 为 `%APPDATA%\\AutoEssayTypesettingTool`，
+    macOS 为 `~/Library/Application Support/AutoEssayTypesettingTool`。
 
-    找不到 `APPDATA`（非 Windows 环境）时退到用户主目录下的隐藏文件夹，
-    不让程序直接崩掉。目录不存在就顺手建好，调用方不用自己再判断。
+    macOS 下若新目录尚不存在且旧版 `~/.config/AutoEssayTypesettingTool` 存在，
+    只在新目录创建前迁移一次，绝不覆盖已有新目录。
     """
-    base = os.environ.get("APPDATA")
-    root = pathlib.Path(base) if base else pathlib.Path.home() / ".config"
-    d = root / APP_DIR_NAME
+    is_mac = IS_MAC if platform is None else (platform == "darwin")
+    h = home or pathlib.Path.home()
+    d = user_data_base(platform=platform, env=env, home=h) / APP_DIR_NAME
+    if is_mac and not d.exists():
+        legacy = h / ".config" / APP_DIR_NAME
+        if legacy.is_dir():
+            try:
+                d.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(legacy, d, dirs_exist_ok=True)
+            except OSError:
+                pass
     d.mkdir(parents=True, exist_ok=True)
     return d
 

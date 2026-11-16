@@ -291,6 +291,7 @@ from essay_tool.config.paths import (builtin_presets_dir, cleanup_session_work_d
                                      session_work_dir, user_presets_dir)
 from essay_tool.config.settings import GuiSettings, load_settings, save_settings  # noqa: E402
 from essay_tool.gui import update_ui  # noqa: E402
+from essay_tool.platform_compat import IS_MAC, open_path  # noqa: E402
 
 FAMILY = "Microsoft YaHei UI"
 C_APP = "#f4f4f2"
@@ -667,6 +668,29 @@ IMPLIED. BY WAY OF EXAMPLE, BUT NOT LIMITATION, PSF MAKES NO AND
 DISCLAIMS ANY REPRESENTATION OR WARRANTY OF MERCHANTABILITY OR FITNESS
 FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF PYTHON WILL NOT
 INFRINGE ANY THIRD PARTY RIGHTS."""),
+)
+
+_THIRD_PARTY_NOTICES_MACOS = (
+    ("certifi（仅 macOS 版）", "Mozilla Public License 2.0", """This package contains a modified version of ca-bundle.crt:
+
+ca-bundle.crt -- Bundle of CA Root Certificates
+
+This is a bundle of X.509 certificates of public Certificate Authorities
+(CA). These were automatically extracted from Mozilla's root certificates
+file (certdata.txt).  This file can be found in the mozilla source tree:
+https://hg.mozilla.org/mozilla-central/file/tip/security/nss/lib/ckfw/builtins/certdata.txt
+It contains the certificates in PEM format and therefore
+can be directly used with curl / libcurl / php_curl, or with
+an Apache+mod_ssl webserver for SSL client authentication.
+Just configure this file as the SSLCACertificateFile.#
+
+***** BEGIN LICENSE BLOCK *****
+This Source Code Form is subject to the terms of the Mozilla Public License,
+v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain
+one at http://mozilla.org/MPL/2.0/.
+
+***** END LICENSE BLOCK *****
+@(#) $RCSfile: certdata.txt,v $ $Revision: 1.80 $ $Date: 2011/11/03 15:11:58 $"""),
 )
 
 
@@ -2197,7 +2221,8 @@ class MainWindow(tk.Tk):
 
         # —— 第三方依赖库版权声明（各是一个链接，点开弹窗看原文）
         label(p3, "第三方依赖库版权声明", font=(FAMILY, 10, "bold"), pady=(24, 10))
-        for name, license_name, text in _THIRD_PARTY_NOTICES:
+        notices = _THIRD_PARTY_NOTICES + (_THIRD_PARTY_NOTICES_MACOS if IS_MAC else ())
+        for name, license_name, text in notices:
             lnk = tk.Label(p3, text=f"{name} —— {license_name}",
                           font=(FAMILY, 10, "underline"), bg=C_PANEL, fg=C_LINK,
                           cursor="hand2")
@@ -2762,7 +2787,7 @@ class MainWindow(tk.Tk):
         path = self._effective_backup_dir()
         try:
             path.mkdir(parents=True, exist_ok=True)
-            os.startfile(str(path))  # noqa: S606 —— Windows 专用工具，就是要用这个
+            open_path(path)
         except OSError as exc:
             self.status(f"打开备份路径失败：{exc}")
 

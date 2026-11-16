@@ -56,10 +56,10 @@ def _selftest(out_path: str) -> int:
         from PIL import Image
         d = paths.resource_dir() / "essay_tool" / "gui" / "assets"
         for n in ("cover_thesis.png", "cover_year.png", "cover_course.png",
-                  "cover_tenstar.png", "app.ico"):
+                  "cover_tenstar.png", "app.ico", "app.png", "app.icns"):
             with Image.open(d / n) as im:
                 im.load()
-        return "封面样张 4 张 + 图标"
+        return "封面样张 4 张 + 图标 3 份"
 
     def covers():
         from essay_tool.engine import cover
@@ -128,7 +128,11 @@ def _selftest(out_path: str) -> int:
         import json
         import ssl
         from essay_tool import update_check as uc
-        ssl.create_default_context()
+        from essay_tool.platform_compat import IS_MAC, ensure_ssl_certs
+        ensure_ssl_certs()
+        ctx = ssl.create_default_context()
+        if IS_MAC:
+            assert ctx.cert_store_stats().get("x509_ca", 0) > 0, "SSL 根证书为空"
         info = uc.parse_latest(json.dumps({
             "version": "9.9.9", "date": "2099-01-02", "changelog": "x",
             "downloads": [{"name": "n", "url": "https://github.com/Grandliu66"},
@@ -148,6 +152,8 @@ def _selftest(out_path: str) -> int:
 
 
 if __name__ == "__main__":
+    from essay_tool.platform_compat import ensure_ssl_certs
+    ensure_ssl_certs()
     if len(sys.argv) >= 2 and sys.argv[1] == "--selftest":
         sys.exit(_selftest(sys.argv[2] if len(sys.argv) >= 3 else "selftest.txt"))
     from essay_tool.gui.main_window import main

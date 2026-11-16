@@ -8,19 +8,19 @@
 from __future__ import annotations
 
 import ctypes
-import sys
-from ctypes import wintypes
 from typing import Callable
+
+from essay_tool.platform_compat import IS_WIN as _IS_WIN
 
 WM_DROPFILES = 0x0233
 WM_COPYGLOBALDATA = 0x0049
 MSGFLT_ALLOW = 1
 GWLP_WNDPROC = -4
 
-_IS_WIN = sys.platform == "win32"
-
 
 def _drop_paths(hdrop) -> list[str]:
+    from ctypes import wintypes
+
     shell32 = ctypes.windll.shell32
     shell32.DragQueryFileW.argtypes = [wintypes.HANDLE, wintypes.UINT, wintypes.LPWSTR, wintypes.UINT]
     shell32.DragQueryFileW.restype = wintypes.UINT
@@ -39,6 +39,8 @@ def enable_file_drop(window, on_files: Callable[[list[str]], None]) -> bool:
     if not _IS_WIN:
         return False
     try:
+        from ctypes import wintypes
+
         user32 = ctypes.windll.user32
         shell32 = ctypes.windll.shell32
         window.update_idletasks()

@@ -9,6 +9,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
@@ -119,8 +120,41 @@ def case_compat() -> None:
             os.environ["SSL_CERT_FILE"] = orig_ssl_env
 
 
+def case_paths() -> None:
+    print("== paths.user_data_dir ==")
+    from essay_tool.config import paths
+
+    with tempfile.TemporaryDirectory() as tmp:
+        home = pathlib.Path(tmp) / "home"
+        legacy = home / ".config" / paths.APP_DIR_NAME / "presets"
+        legacy.mkdir(parents=True, exist_ok=True)
+        (legacy / "custom.json").write_text("old", encoding="utf-8")
+
+        target = paths.user_data_dir(platform="darwin", env={}, home=home)
+        expected_mac = home / "Library" / "Application Support" / paths.APP_DIR_NAME
+        check("darwin 迁移目录位置正确", target == expected_mac, repr(target))
+        check(
+            "darwin 旧目录迁移至新目录",
+            (target / "presets" / "custom.json").read_text(encoding="utf-8") == "old",
+        )
+
+        # 新旧并存时不覆盖新目录
+        (target / "presets" / "custom.json").write_text("new", encoding="utf-8")
+        (legacy / "custom.json").write_text("old-again", encoding="utf-8")
+        target2 = paths.user_data_dir(platform="darwin", env={}, home=home)
+        check(
+            "darwin 新旧并存不覆盖新目录",
+            (target2 / "presets" / "custom.json").read_text(encoding="utf-8") == "new",
+        )
+
+        roaming = pathlib.Path(tmp) / "Roaming"
+        win_dir = paths.user_data_dir(platform="win32", env={"APPDATA": str(roaming)}, home=home)
+        check("win32 user_data_dir", win_dir == roaming / paths.APP_DIR_NAME, repr(win_dir))
+
+
 def main() -> int:
     case_compat()
+    case_paths()
     print()
     print(f"失败 {len(fails)} 条")
     for name in fails:
