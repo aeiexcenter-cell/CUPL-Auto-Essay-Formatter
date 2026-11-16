@@ -18,7 +18,10 @@
 
 from __future__ import annotations
 
+import argparse
 import ast
+import builtins
+import os
 import pathlib
 import shutil
 import sys
@@ -53,6 +56,20 @@ Runtime components shipped in the application folder
   see ChineseSimplified.LICENSE.txt.
 """
 
+RUNTIME_COMPONENTS_MACOS = """\
+Runtime components shipped in the macOS application bundle (.app)
+=================================================================
+
+* Python 3.13 runtime (libpython3.13.dylib and the standard library) -- Python Software
+  Foundation License. Full text: Python-LICENSE.txt (in this folder).
+* Tcl/Tk 8.6 (libtcl8.6.dylib, libtk8.6.dylib, _tk_data, _tcl_data) -- Tcl/Tk license.
+* OpenSSL 3.x (libcrypto.3.dylib, libssl.3.dylib) -- Apache License 2.0.
+* zlib / liblzma / XZ Utils -- permissive / public domain.
+* certifi CA Root Certificates bundle -- Mozilla Public License 2.0 (see certifi section above).
+* PyInstaller bootloader -- GPL-2.0 with the special exception that allows the
+  bootloader to be distributed as part of an application under any license.
+"""
+
 
 def _const(name: str):
     tree = ast.parse(SRC.read_text(encoding="utf-8"))
@@ -63,20 +80,53 @@ def _const(name: str):
     raise SystemExit(f"找不到 main_window.py 里的 {name}")
 
 
-def _write(path: pathlib.Path, text: str) -> None:
+def _write(path: pathlib.Path, text: str, *, lf_only: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     body = text.replace("\r\n", "\n").rstrip("\n") + "\n"
-    path.write_bytes(b"\xef\xbb\xbf" + body.replace("\n", "\r\n").encode("utf-8"))
+    if lf_only:
+        path.write_bytes(body.encode("utf-8"))
+    else:
+        path.write_bytes(b"\xef\xbb\xbf" + body.replace("\n", "\r\n").encode("utf-8"))
 
 
-def main() -> int:
+def _find_python_license() -> pathlib.Path | None:
+    root_resolved = ROOT.resolve()
+    candidates: list[pathlib.Path] = []
+    for base in (
+        pathlib.Path(sys.base_prefix),
+        pathlib.Path(os.__file__).resolve().parent,
+        pathlib.Path(os.__file__).resolve().parent.parent,
+    ):
+        candidates.append(base / "LICENSE.txt")
+        candidates.append(base / "LICENSE")
+    for p in getattr(builtins.license, "_Printer__filenames", ()):
+        candidates.append(pathlib.Path(p))
+    for cand in candidates:
+        try:
+            resolved = cand.resolve()
+        except OSError:
+            continue
+        if resolved.is_file() and resolved.parent != root_resolved:
+            return resolved
+    return None
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="生成随安装包/应用包分发的许可声明文件")
+    parser.add_argument("--platform", choices=("windows", "macos"), default="windows")
+    args = parser.parse_args(argv)
+    is_mac = args.platform == "macos"
+
     own_name, own_license, own_text = _const("_OWN_LICENSE")
     third = _const("_THIRD_PARTY_NOTICES")
+    if is_mac:
+        third = third + _const("_THIRD_PARTY_NOTICES_MACOS")
+        shutil.rmtree(OUT, ignore_errors=True)
 
     # 项目根目录 LICENSE：纯 MIT 原样（不带中文说明；带 BOM 会让 GitHub 显示异常，所以这份不加 BOM、用 LF）
     (ROOT / "LICENSE").write_text(own_text.strip("\n") + "\n", encoding="utf-8", newline="\n")
 
-    _write(OUT / "LICENSE.txt", own_text)
+    _write(OUT / "LICENSE.txt", own_text, lf_only=is_mac)
 
     parts = [f"Third-party software notices for {own_name}\n"
              "=" * 60 + "\n\n"
@@ -84,16 +134,22 @@ def main() -> int:
              "texts are reproduced verbatim from the libraries' own LICENSE files.\n"]
     for name, license_name, text in third:
         parts.append(f"\n{'-' * 60}\n{name} -- {license_name}\n{'-' * 60}\n\n{text.strip()}\n")
-    parts.append("\n" + "=" * 60 + "\n\n" + RUNTIME_COMPONENTS)
-    _write(OUT / "THIRD-PARTY-NOTICES.txt", "".join(parts))
+    runtime_text = RUNTIME_COMPONENTS_MACOS if is_mac else RUNTIME_COMPONENTS
+    parts.append("\n" + "=" * 60 + "\n\n" + runtime_text)
+    _write(OUT / "THIRD-PARTY-NOTICES.txt", "".join(parts), lf_only=is_mac)
 
-    py_license = pathlib.Path(sys.base_prefix) / "LICENSE.txt"
-    if not py_license.is_file():
-        raise SystemExit(f"找不到 Python 自带的许可文件：{py_license}")
-    _write(OUT / "Python-LICENSE.txt", py_license.read_text(encoding="utf-8", errors="replace"))
+    py_license = _find_python_license()
+    if py_license is None:
+        if not is_mac:
+            raise SystemExit(f"找不到 Python 自带的许可文件：{pathlib.Path(sys.base_prefix) / 'LICENSE.txt'}")
+        py_text = "Python Software Foundation License\nSee https://www.python.org/psf/license/\n"
+    else:
+        py_text = py_license.read_text(encoding="utf-8", errors="replace")
+    _write(OUT / "Python-LICENSE.txt", py_text, lf_only=is_mac)
 
-    zh = ROOT / "packaging" / "languages" / "ChineseSimplified.LICENSE.txt"
-    shutil.copyfile(zh, OUT / "ChineseSimplified.LICENSE.txt")
+    if not is_mac:
+        zh = ROOT / "packaging" / "languages" / "ChineseSimplified.LICENSE.txt"
+        shutil.copyfile(zh, OUT / "ChineseSimplified.LICENSE.txt")
 
     files = sorted(p.name for p in OUT.iterdir())
     print(f"已生成：build\\licenses\\（{len(files)} 个文件：{'、'.join(files)}）；根目录 LICENSE 已同步")
