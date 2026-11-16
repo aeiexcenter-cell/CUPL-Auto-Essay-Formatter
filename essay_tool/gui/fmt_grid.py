@@ -28,8 +28,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 
 from essay_tool.config.units import CHINESE_FONT_SIZES
 from essay_tool.gui.widgets import BORDER, BOX, CHECK, wheel_notch
-
-FAMILY = "Microsoft YaHei UI"
+from essay_tool.platform_compat import UI_FONT as FAMILY
 
 # ---------------------------------------------------------------- 词汇表与常量
 CN_FONTS = ["宋体", "黑体", "楷体", "仿宋", "微软雅黑", "华文中宋",

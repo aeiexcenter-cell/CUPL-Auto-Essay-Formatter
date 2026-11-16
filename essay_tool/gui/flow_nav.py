@@ -51,8 +51,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from essay_tool.gui.widgets import wheel_notch  # noqa: E402
-
-FAMILY = "Microsoft YaHei UI"
+from essay_tool.platform_compat import UI_FONT as FAMILY  # noqa: E402
 C_LINK = "#0563c1"              # 可点文字：Word 超链接同款蓝
 
 _NODE_FILL = "#ffffff"
@@ -444,11 +443,8 @@ class FlowPanel(tk.Frame):
 
 
 def main() -> None:
-    try:
-        import ctypes
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    except Exception:                                  # noqa: BLE001
-        pass
+    from essay_tool.gui.platform_ui import enable_dpi_awareness
+    enable_dpi_awareness()
 
     root = tk.Tk()
     root.title("流程图导航（独立演示）")

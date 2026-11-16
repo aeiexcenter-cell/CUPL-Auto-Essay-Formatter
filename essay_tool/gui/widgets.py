@@ -20,12 +20,12 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
+from essay_tool.platform_compat import UI_FONT as FAMILY
+
 # 面板底色。方块图的填充色就是它，所以**用这套复选框的窗口底色要一致**
 # （主窗口面板、各弹窗都是纯白）。
 PANEL_BG = "#ffffff"
 PANEL_FG = "#222222"
-# 全项目统一的界面字体（各 gui 模块里同样写着这一行）
-FAMILY = "Microsoft YaHei UI"
 
 BOX = 16          # 方块边长
 GAP = 8           # 方块与文字之间的距离（填底色，肉眼看不出，只是拉开距离）

@@ -152,9 +152,36 @@ def case_paths() -> None:
         check("win32 user_data_dir", win_dir == roaming / paths.APP_DIR_NAME, repr(win_dir))
 
 
+def case_ui_basics() -> None:
+    print("== platform_ui 基础 ==")
+    import tkinter as tk
+    from tkinter import ttk
+    from essay_tool.gui import platform_ui
+
+    root = tk.Tk()
+    root.withdraw()
+    orig_ui_mac = platform_ui.UI_MAC
+    try:
+        before_theme = ttk.Style(root).theme_use()
+        platform_ui.UI_MAC = False
+        platform_ui.init_theme(root)
+        check("Windows 默认不改变 ttk 主题", ttk.Style(root).theme_use() == before_theme)
+
+        platform_ui.UI_MAC = True
+        platform_ui.init_theme(root)
+        check("UI_MAC=True 切换到 clam 主题", ttk.Style(root).theme_use() == "clam")
+
+        platform_ui.apply_app_icon(root)
+        check("apply_app_icon 不抛异常", True)
+    finally:
+        platform_ui.UI_MAC = orig_ui_mac
+        root.destroy()
+
+
 def main() -> int:
     case_compat()
     case_paths()
+    case_ui_basics()
     print()
     print(f"失败 {len(fails)} 条")
     for name in fails:

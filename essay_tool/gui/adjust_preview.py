@@ -269,6 +269,7 @@ _AUTO_GENERATED_PARTS = ("目录", "插图清单", "附表清单", "插图和附
 _LIST_SHAPE_PARTS = ("插图清单", "附表清单", "插图和附表清单")
 from essay_tool.gui.widgets import PANEL_BG, checkbutton, init_checkbox_style, wheel_notch
 from essay_tool.gui.win_place import center_on
+from essay_tool.platform_compat import UI_FONT as FAMILY
 from essay_tool.engine.normalize import (  # noqa: E402
     heading_style_text, inline_keyword_text, label_style_text)
 from essay_tool.engine.apply_structure import LIST_PART_KINDS, reference_display_text
@@ -331,8 +332,6 @@ COL_LAYOUTS = {
 _HEAD_KEYS = ("l1", "l2", "l3", "l4")
 COL_NAME = {"label": "结构标签", "text": "正文", "l1": "一级标题", "l2": "二级标题",
             "l3": "三级标题", "l4": "四级标题"}
-
-FAMILY = "Microsoft YaHei UI"
 
 
 # ================================================================ 数据模型
@@ -1288,7 +1287,7 @@ class AdjustWindow:
         # 2026-09-14："原有窗口上面那一栏的按钮一概不要"）----
         top = tk.Frame(root, bg="#e9e9e6")
         top.pack(side="top", fill="x")
-        tk.Label(top, text="识别结果调整", font=("Microsoft YaHei UI", 12, "bold"),
+        tk.Label(top, text="识别结果调整", font=(FAMILY, 12, "bold"),
                  bg="#e9e9e6", fg="#333").pack(side="left", padx=(12, 6), pady=6)
         # 没有文档时原来写的是“数据：（尚未导入文件——空白模板骨架…）”，
         # 用户 2026-09-16 点名删掉，所以这种时候标签留空。
@@ -3569,11 +3568,8 @@ def main() -> None:
         do_check(args.doc)
         return
 
-    try:
-        import ctypes
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    except Exception:
-        pass
+    from essay_tool.gui.platform_ui import enable_dpi_awareness
+    enable_dpi_awareness()
 
     root = tk.Tk()
     root.title("识别结果调整")

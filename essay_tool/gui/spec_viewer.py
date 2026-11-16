@@ -53,8 +53,7 @@ from essay_tool.config.paths import resource_dir  # noqa: E402
 from essay_tool.gui.win_place import center_on  # noqa: E402
 
 from essay_tool.engine.detect import _try_numbered, detect_headings  # noqa: E402
-
-FAMILY = "Microsoft YaHei UI"
+from essay_tool.platform_compat import UI_FONT as FAMILY  # noqa: E402
 REFERENCE_DIR = resource_dir() / "reference"      # 打包后在 _internal 里
 
 C_APP = "#f4f4f2"
@@ -616,11 +615,8 @@ def main() -> None:
             return
         source = _docx_source(spec)
 
-    try:
-        import ctypes
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    except Exception:
-        pass
+    from essay_tool.gui.platform_ui import enable_dpi_awareness
+    enable_dpi_awareness()
 
     root = tk.Tk()
     root.withdraw()                      # 只留 SpecWindow 这个子窗口

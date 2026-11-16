@@ -216,65 +216,25 @@ def open_developer_contact() -> None:
         pass
 
 
-def _enable_dpi_awareness() -> None:
-    """Windows 高分屏适配第一步：声明进程 DPI 感知。
+from essay_tool.gui.platform_ui import (  # noqa: E402
+    apply_app_icon as _platform_apply_app_icon,
+    apply_platform_scaling as _platform_apply_scaling,
+    enable_dpi_awareness as _platform_enable_dpi,
+    init_theme as _platform_init_theme,
+)
 
-    **必须在本进程创建第一个 Tk 窗口之前调用**——创建以后再调不生效，Windows
-    已经按"这个进程不感知 DPI"把窗口画成位图再拉伸了，字体/边框全糊
-    （换开发机、显示器缩放比例跟旧机器不一样时最容易看出来）。放在模块顶层、
-    import 时就跑，不管这个文件是被直接运行还是被别的脚本 `import
-    essay_tool.gui.main_window` 拿去用，都能在 `MainWindow()`（继承
-    `tk.Tk`）真正创建窗口之前抢先执行到。三级回退：Per-Monitor-V2
-    （Win10 1703+，效果最好）→ shcore 的系统级感知（Win8.1+）→ 最老的
-    `user32.SetProcessDPIAware()`。拿不到、或者已经被声明过（比如
-    python.exe 自带清单已经设置），异常直接吞掉，不影响程序继续跑。
-    """
-    try:
-        import ctypes
-        # DPI_AWARENESS_CONTEXT 本质是指针大小的句柄，裸 Python int 在 64 位
-        # 上传参会传错（实测：传 -4 这个 int，调用"成功"但返回值是失败 0，
-        # 不抛异常也不生效）——必须包成 c_void_p 才对（2026-09-13 用诊断脚本
-        # 实测确认：包完 SetProcessDpiAwarenessContext 才真的把 DPI 感知从
-        # "不感知"改成了"按显示器"）。三个 API 的返回值**都要检查**，不能只
-        # 看有没有抛异常：不抛异常不代表调用真的生效了。
-        try:
-            ok = ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
-            if ok:
-                return
-        except Exception:
-            pass
-        try:
-            # SetProcessDpiAwareness 返回 HRESULT，S_OK=0 才是成功；已经被上面
-            # 设置过一次的话这里会拿到 E_ACCESSDENIED（DPI 感知只能设一次）。
-            hr = ctypes.windll.shcore.SetProcessDpiAwareness(1)
-            if hr == 0:
-                return
-        except Exception:
-            pass
-        ctypes.windll.user32.SetProcessDPIAware()
-    except Exception:
-        pass
+
+def _enable_dpi_awareness() -> None:
+    """Windows 高分屏适配第一步：声明进程 DPI 感知（转调 platform_ui）。"""
+    _platform_enable_dpi()
 
 
 _enable_dpi_awareness()
 
 
 def _fix_tk_scaling(root: tk.Tk) -> None:
-    """高分屏适配第二步：校正 Tk 自己的点→像素换算。
-
-    进程声明 DPI 感知只是让 Windows 别再拿位图硬拉伸；Tk/Tcl 8.6 自己算
-    `tk scaling`（多少像素等于一磅）时，某些机器上仍然按固定 96 DPI 走，
-    跟真实显示器的 DPI 对不上，字体点数虽然没变、量出来的像素尺寸却偏小，
-    观感依然发虚。这里用 `winfo_fpixels("1i")`（DPI 感知生效后这个值就是
-    真实的"每英寸像素数"）反推、显式钉一次 `tk scaling`。必须在
-    `super().__init__()` 建完根窗口、但**在任何子控件/字体被创建之前**调用。
-    """
-    try:
-        dpi = root.winfo_fpixels("1i")
-        if dpi > 0:
-            root.tk.call("tk", "scaling", dpi / 72.0)
-    except Exception:
-        pass
+    """高分屏适配第二步：按平台校正 Tk scaling（转调 platform_ui）。"""
+    _platform_apply_scaling(root)
 
 
 from essay_tool.engine.recognize import DEFAULT_HEADING_SCHEME  # noqa: E402
@@ -291,9 +251,8 @@ from essay_tool.config.paths import (builtin_presets_dir, cleanup_session_work_d
                                      session_work_dir, user_presets_dir)
 from essay_tool.config.settings import GuiSettings, load_settings, save_settings  # noqa: E402
 from essay_tool.gui import update_ui  # noqa: E402
-from essay_tool.platform_compat import IS_MAC, open_path  # noqa: E402
+from essay_tool.platform_compat import IS_MAC, UI_FONT as FAMILY, open_path  # noqa: E402
 
-FAMILY = "Microsoft YaHei UI"
 C_APP = "#f4f4f2"
 C_PANEL = "#ffffff"
 C_LINE = "#c9c9c5"
@@ -422,12 +381,8 @@ APP_ICON = COVER_ASSETS_DIR / "app.ico"
 
 
 def apply_app_icon(win: tk.Misc) -> None:
-    """标题栏/任务栏图标（替换 Tk 默认的羽毛）。`default=` 让之后建的所有弹窗
-    也自动用它。图标缺失或读不了不是故障，静默沿用默认图标。"""
-    try:
-        win.iconbitmap(default=str(APP_ICON))
-    except Exception:
-        pass
+    """标题栏/任务栏/Dock 图标（转调 platform_ui）。"""
+    _platform_apply_app_icon(win)
 
 from essay_tool.gui.widgets import (checkbutton, checkbutton_style_on, init_checkbox_style,
                                     wheel_notch)
@@ -813,6 +768,7 @@ class MainWindow(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         _fix_tk_scaling(self)
+        _platform_init_theme(self)
         apply_app_icon(self)
         self.title("CUPL本科论文自动排版工具")
         self._flow_width = self._set_default_geometry()

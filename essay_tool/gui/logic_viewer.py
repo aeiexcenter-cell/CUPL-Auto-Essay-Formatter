@@ -55,8 +55,7 @@ from tkinter import ttk
 
 from essay_tool.gui.table_view import CanvasTable
 from essay_tool.gui.win_place import center_on
-
-FAMILY = "Microsoft YaHei UI"
+from essay_tool.platform_compat import UI_FONT as FAMILY
 C_APP = "#f4f4f2"
 C_BAR = "#e9e9e6"
 
