@@ -61,3 +61,9 @@ reference/*
 !reference/中国政法大学本科毕业论文撰写格式规范.docx
 !reference/附件二 ：第二十四届“学术十星”论文大赛参赛作品撰写格式.pdf
 docs/
+
+# ---- macOS 产物与元数据
+.DS_Store
+*.dmg
+packaging/.venv-macos/
+
