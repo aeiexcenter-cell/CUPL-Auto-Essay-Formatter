@@ -16,3 +16,8 @@
 5. 提交并推送到 GitHub（含 `latest.json`），创建 GitHub Release 并上传安装包。
 6. 把同一份 `latest.json` 推到 Gitee 小仓库（`master` 分支）。顺序要紧：**最后**才推 `latest.json`，否则用户会先收到“有新版本”，点进去却下载不到。
 7. 在国内网络（校园网、手机流量）各打开一次 Gitee 的 raw 地址，确认能读到。
+
+## macOS 构建说明
+
+- **本地在 macOS 上打包**：运行 `bash packaging/build_macos.sh`（默认使用 `python3.13` 或 `python3`，可通过 `PYTHON_BIN=...` 指定解释器）。脚本会使用 `packaging/CUPL-UTAF-macos.spec` 打出 `dist/CUPL-UTAF.app`，自动运行 `--selftest`、生成 macOS 版许可声明、执行 ad-hoc 签名并封装 `dist/CUPL-UTAF V<版本> macOS-<架构>.dmg`。
+- **GitHub Actions 自动构建**：`.github/workflows/macos.yml` 在 `port_to_macos` 分支推送或手动触发时，会先跑完 Windows 基线并生成跨平台对比基准，再于 `macos-14`（arm64）与 `macos-15-intel`（x86_64）上并行完成自检、AAT、跨平台产物一致性比对、GUI 巡检截图与 `.dmg` 打包。

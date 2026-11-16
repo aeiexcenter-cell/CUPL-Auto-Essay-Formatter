@@ -22,7 +22,27 @@
 ## 系统要求
 
 - Windows 10 或更高版本。
-- 如果从源码运行，需要 Python 3.11 及以上版本。
+- macOS 11（Big Sur）或更高版本（支持 Apple Silicon 与 Intel）。
+- 如果从源码运行，需要 Python 3.11 及以上版本（推荐 Python 3.13）。
+
+## macOS 安装与运行（测试版）
+
+- **使用打包版本（`.dmg`）**：从 GitHub Actions 的构建产物下载对应芯片架构的压缩包并解压出 `.dmg`（Apple Silicon 选 `arm64`，Intel 选 `x86_64`），打开后将 `CUPL-UTAF.app` 拖入 `Applications`。
+- **首次打开放行**：当前 macOS 构建包采用 ad-hoc 本地签名（未进行 Apple 公证）。首次打开若被系统拦截，请到「系统设置 → 隐私与安全性」点击「仍要打开」，或在终端执行 `xattr -cr /Applications/CUPL-UTAF.app`。
+- **从源码运行（macOS）**：
+
+```bash
+python3.13 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python main.py
+```
+
+也可以在创建 `.venv` 后直接双击仓库根目录的 `启动论文排版工具.command`。
+
+- **macOS 已知限制**：
+  1. 检查更新保持与上游 Windows 版一致的更新源，提示的下载链接仍指向 Windows 安装包；
+  2. `tools/check_word.py`、`tools/make_cover_preview*.py` 及 `Adversarial Automatic Test` 第 11 层依赖 Windows Word COM，在 macOS 上会自动跳过或仅限 Windows 使用；
+  3. 导出的文档在 Word for Mac 中查看时，宋体、黑体、楷体、仿宋需本机已安装或开启 Office 云字体。
 
 ## 从源码运行
 

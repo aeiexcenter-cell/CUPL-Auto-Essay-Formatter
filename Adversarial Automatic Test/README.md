@@ -45,6 +45,8 @@
 
 ## 运行方式
 
+> 在 macOS / Linux 下运行以下命令时，将 `.venv\Scripts\python.exe` 替换为 `.venv/bin/python` 即可；其中第 11 层（Word 实测层）依赖 Windows Word 与 pywin32，在非 Windows 环境会自动跳过并标黄。
+
 ```powershell
 # 解析规则表并做一致性体检
 .venv\Scripts\python.exe "Adversarial Automatic Test\rules_parser.py"
