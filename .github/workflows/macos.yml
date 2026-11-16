@@ -1,0 +1,138 @@
+name: macOS Build and Cross-Platform Verification
+
+on:
+  push:
+    branches:
+      - port_to_macos
+  workflow_dispatch:
+
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  windows-baseline:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install runtime dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run platform compat & update check tests
+        run: |
+          python tools/check_platform_compat.py
+          python tools/check_update_check.py
+
+      - name: Run AAT suite (tracked fixtures)
+        shell: bash
+        run: |
+          for layer in 写法层 结构层 告警对拍 告警边界 断言层 例外层 等价层; do
+            python "Adversarial Automatic Test/run_aat.py" --only "$layer"
+          done
+          python "Adversarial Automatic Test/gen_invariant.py" --only 中国政法大学
+          python "Adversarial Automatic Test/_rerun_all.py" \
+            "中国政法大学本科毕业论文撰写格式规范.docx" \
+            "中国政法大学本科生毕业论文写作模板.docx" \
+            "中国政法大学本科生课程考核封面.docx"
+
+      - name: Run self-test
+        shell: bash
+        run: |
+          python main.py --selftest selftest-win.txt
+          cat selftest-win.txt
+
+      - name: Generate parity baseline
+        run: python tools/check_parity.py generate parity-win
+
+      - name: Upload parity baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-win
+          path: parity-win
+
+  macos:
+    needs: windows-baseline
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+          - os: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Verify Tkinter availability
+        run: python -c "import tkinter; print('TkVersion:', tkinter.TkVersion); assert tkinter.TkVersion >= 8.6"
+
+      - name: Install runtime dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run platform compat & update check tests
+        run: |
+          python tools/check_platform_compat.py
+          python tools/check_update_check.py
+
+      - name: Run AAT suite (tracked fixtures)
+        shell: bash
+        run: |
+          for layer in 写法层 结构层 告警对拍 告警边界 断言层 例外层 等价层; do
+            python "Adversarial Automatic Test/run_aat.py" --only "$layer"
+          done
+          python "Adversarial Automatic Test/gen_invariant.py" --only 中国政法大学
+          python "Adversarial Automatic Test/_rerun_all.py" \
+            "中国政法大学本科毕业论文撰写格式规范.docx" \
+            "中国政法大学本科生毕业论文写作模板.docx" \
+            "中国政法大学本科生课程考核封面.docx"
+
+      - name: Run source self-test
+        run: |
+          python main.py --selftest selftest-mac-src.txt
+          cat selftest-mac-src.txt
+
+      - name: Download Windows parity baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: parity-win
+          path: parity-win
+
+      - name: Verify cross-platform output parity
+        run: |
+          python tools/check_parity.py generate parity-mac
+          python tools/check_parity.py compare parity-win parity-mac
+
+      - name: Run GUI tour & capture screenshots
+        run: |
+          python tools/gui_tour.py "gui-tour-${{ matrix.arch }}" \
+            --doc "Adversarial Automatic Test/_fixtures/手打目录无页码.docx"
+
+      - name: Upload GUI tour artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-tour-${{ matrix.arch }}
+          path: gui-tour-${{ matrix.arch }}
+
+      - name: Verify live update check
+        run: python tools/check_update_live.py
+
+      - name: Build .app and .dmg
+        run: PYTHON_BIN="$(which python)" bash packaging/build_macos.sh
+
+      - name: Upload macOS .dmg and self-test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg-${{ matrix.arch }}
+          path: |
+            dist/*.dmg
+            build/pyinstaller/selftest.txt
