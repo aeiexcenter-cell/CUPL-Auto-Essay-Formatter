@@ -47,16 +47,20 @@ set -e
 if [ -s "$STDLOG" ]; then
     echo "=== selftest stdio ==="
     cat "$STDLOG"
+    echo ""
 fi
 if [ -f "$REPORT" ]; then
     echo "=== selftest report ==="
     cat "$REPORT"
+    echo ""
 fi
 if [ "$RC" -ne 0 ]; then
-    MSG="$(cat "$REPORT" "$STDLOG" 2>/dev/null | grep -v '^OK ' | tr '\n' ' ' | cut -c1-1500)"
+    MSG="$({ [ -f "$REPORT" ] && cat "$REPORT"; [ -s "$STDLOG" ] && cat "$STDLOG"; true; } | grep -v '^OK ' | tr '\n' ' ' | cut -c1-1500 || true)"
     echo "::error title=SelftestFailed::exit=${RC} ${MSG}"
     exit "$RC"
 fi
+
+trap 'rc=$?; echo ""; echo "::error title=BuildMacosFailed::exit=${rc} line=${LINENO} cmd=${BASH_COMMAND}"' ERR
 
 "$PY" "$ROOT/packaging/make_notices.py" --platform macos
 
@@ -67,11 +71,23 @@ ARCH="$(uname -m)"
 DMG_ROOT="$ROOT/build/dmg-root"
 rm -rf "$DMG_ROOT"
 mkdir -p "$DMG_ROOT"
-cp -R "$APP" "$DMG_ROOT/CUPL-UTAF.app"
+cp -RP "$APP" "$DMG_ROOT/CUPL-UTAF.app"
 ln -s /Applications "$DMG_ROOT/Applications"
 cp -R "$ROOT/build/licenses" "$DMG_ROOT/licenses"
 
 DMG_PATH="$DIST/CUPL-UTAF V${VER} macOS-${ARCH}.dmg"
 rm -f "$DMG_PATH"
-hdiutil create -volname "CUPL-UTAF V${VER}" -srcfolder "$DMG_ROOT" -ov -format UDZO "$DMG_PATH"
+_create_dmg() {
+    hdiutil create -volname "CUPL-UTAF V${VER}" -srcfolder "$DMG_ROOT" -ov -format UDZO "$DMG_PATH"
+}
+for attempt in 1 2 3; do
+    if [ "$attempt" -eq 3 ]; then
+        _create_dmg
+    elif _create_dmg; then
+        break
+    else
+        echo "hdiutil create attempt $attempt failed, retrying in 5s..." >&2
+        sleep 5
+    fi
+done
 echo "Built: $DMG_PATH"

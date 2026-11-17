@@ -28,6 +28,19 @@ for p in sorted((ROOT / "presets").glob("*.json")):
 for p in sorted((ROOT / "essay_tool" / "gui" / "assets").iterdir()):
     datas.append((str(p), "essay_tool/gui/assets"))
 
+# python-docx's docx/parts/*.py resolves "../templates/*.xml" relative to __file__
+# without normpath; inside a frozen POSIX .app BUNDLE, kernel lookup of
+# Contents/Frameworks/docx/parts/../templates/... fails with ENOENT unless
+# docx/parts exists on disk alongside docx/templates.
+_docx_parts_dir = ROOT / "build" / "pyinstaller_aux" / "docx_parts"
+_docx_parts_dir.mkdir(parents=True, exist_ok=True)
+_docx_parts_marker = _docx_parts_dir / "_keep.txt"
+_docx_parts_marker.write_text(
+    "placeholder so POSIX docx/parts/../templates traversal resolves\n",
+    encoding="utf-8",
+)
+datas.append((str(_docx_parts_marker), "docx/parts"))
+
 a = Analysis(                                             # noqa: F821
     [str(ROOT / "main.py")],
     pathex=[str(ROOT)],
